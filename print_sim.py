@@ -78,15 +78,24 @@ def dfs(track, depth=0):
         for _ in dfs(child, depth+1):
             yield _
 
-def print_sim(rootfile):
+def print_sim(rootfile, n=1):
     with open_root(rootfile) as f:
         tree = f.Get('Events')
+        i = 0
         for _ in tree:
-            genparticles = [i for i in tree.recoGenParticles_genParticles__GEN.product()]
-            simtracks = [Track(i) for i in tree.SimTracks_g4SimHits__SIM.product()]
-            simtrack_ids = [t.id for t in simtracks]
-            simvertices = [i for i in tree.SimVertexs_g4SimHits__SIM.product()]
+            i += 1
+            print('event %s' % i)
 
+            def get(branch):
+                try:
+                    return getattr(tree, branch + 'SIM').product()
+                except AttributeError:
+                    return getattr(tree, branch + 'HLT').product()
+
+            # genparticles = [i for i in tree.recoGenParticles_genParticles__GEN.product()]
+            simtracks = [Track(i) for i in get('SimTracks_g4SimHits__')]
+            simtrack_ids = [t.id for t in simtracks]
+            simvertices = [i for i in get('SimVertexs_g4SimHits__')]
 
             for t in simtracks:
                 parent_id = simvertices[t.track.vertIndex()].parentIndex()
@@ -99,11 +108,17 @@ def print_sim(rootfile):
                 for t, depth in dfs(root):
                     print('  '*depth + str(t))
 
+            hits = [h for h in get('PCaloHits_g4SimHits_HGCHitsEE_')]
+            print('%s hits' % len(hits))
+
+            if i >= n: return
+
 
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('rootfile', type=str)
+    parser.add_argument('-n', '--nevents', type=int, default=1)
     args = parser.parse_args()
-    print_sim(args.rootfile)
+    print_sim(args.rootfile, n=args.nevents)

@@ -40,7 +40,8 @@ def sim(
         '--datatier'        : 'SIM',
         '--beamspot'        : 'NoSmear',
         '--geometry'        : 'Extended2026D49',
-        '--pileup'          : 'NoPileUp',
+        # '--pileup'          : 'NoPileUp',
+        '--pileup'          : 'AVE_200_BX_25ns',
         })
     if dofinecalo: driver.kwargs['--procModifier'] = 'fineCalo'
     process = common.load_process_from_driver(driver, 'sim_driver.py')
