@@ -40,8 +40,7 @@ def sim(
         '--datatier'        : 'SIM',
         '--beamspot'        : 'NoSmear',
         '--geometry'        : 'Extended2026D49',
-        # '--pileup'          : 'NoPileUp',
-        '--pileup'          : 'AVE_200_BX_25ns',
+        '--pileup'          : 'AVE_200_BX_25ns' if pu_rootfiles else 'NoPileUp',
         })
     if dofinecalo: driver.kwargs['--procModifier'] = 'fineCalo'
     process = common.load_process_from_driver(driver, 'sim_driver.py')
@@ -80,6 +79,9 @@ def sim(
         process.mix.maxBunch = cms.int32(3)
         process.mix.input.fileNames = cms.untracked.vstring([])
         process.mix.digitizers = cms.PSet(process.theDigitizersValid)
+
+        
+
 
     common.add_debug_module(process, 'DoFineCalo')
     common.add_debug_module(process, 'mix')

@@ -111,6 +111,10 @@ def print_sim(rootfile, n=1):
             hits = [h for h in get('PCaloHits_g4SimHits_HGCHitsEE_')]
             print('%s hits' % len(hits))
 
+            print('CaloParticles:')
+            for p in get('CaloParticles_mix_MergedCaloTruth_'):
+                print('event_id={} trackId={}'.format(p.eventId().rawId(), p.particleId()))
+
             if i >= n: return
 
 
