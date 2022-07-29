@@ -1,5 +1,7 @@
 from __future__ import print_function
 from contextlib import contextmanager
+from itertools import chain
+
 
 import ROOT
 from DataFormats.FWLite import Events, Handle
@@ -88,32 +90,50 @@ def print_sim(rootfile, n=1):
 
             def get(branch):
                 try:
-                    return getattr(tree, branch + 'SIM').product()
+                    return getattr(tree, branch).product()
                 except AttributeError:
-                    return getattr(tree, branch + 'HLT').product()
+                    try:
+                        return getattr(tree, branch + 'SIM').product()
+                    except AttributeError:
+                        return getattr(tree, branch + 'HLT').product()
 
             # genparticles = [i for i in tree.recoGenParticles_genParticles__GEN.product()]
             simtracks = [Track(i) for i in get('SimTracks_g4SimHits__')]
             simtrack_ids = [t.id for t in simtracks]
             simvertices = [i for i in get('SimVertexs_g4SimHits__')]
 
+            hitcount_per_track = {}
             for t in simtracks:
                 parent_id = simvertices[t.track.vertIndex()].parentIndex()
                 if parent_id != -1:
                     t.add_parent(simtracks[simtrack_ids.index(parent_id)])
+                hitcount_per_track[t.id] = 0
 
             roots = [t for t in simtracks if t.is_root]
 
+            for branch in [
+                'PCaloHits_g4SimHits_HGCHitsEE_SIM',
+                'PCaloHits_g4SimHits_HGCHitsHEback_SIM',
+                'PCaloHits_g4SimHits_HGCHitsHEfront_SIM',
+                ]:
+                for hit in get(branch):
+                    trackid = hit.geantTrackId()
+                    hitcount_per_track[trackid] += 1
+
             for root in roots:
                 for t, depth in dfs(root):
-                    print('  '*depth + str(t))
+                    print('  '*depth + f'{t} nhits={hitcount_per_track[t.id]}')
 
-            hits = [h for h in get('PCaloHits_g4SimHits_HGCHitsEE_')]
-            print('%s hits' % len(hits))
 
-            print('CaloParticles:')
-            for p in get('CaloParticles_mix_MergedCaloTruth_'):
-                print('event_id={} trackId={}'.format(p.eventId().rawId(), p.particleId()))
+            # hits = [h for h in get('PCaloHits_g4SimHits_HGCHitsEE_')]
+            # print('%s hits' % len(hits))
+
+            try:
+                print('\nCaloParticles:')
+                for p in get('CaloParticles_mix_MergedCaloTruth_'):
+                    print('event_id={} trackId={}'.format(p.eventId().rawId(), p.particleId()))
+            except AttributeError:
+                print('Could not print CaloParticles')
 
             if i >= n: return
 

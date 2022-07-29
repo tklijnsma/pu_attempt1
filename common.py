@@ -140,3 +140,70 @@ def rng(process, seed=1001):
     process.RandomNumberGeneratorService.VtxSmeared.initialSeed = cms.untracked.uint32(seed)
     process.RandomNumberGeneratorService.mix.initialSeed = cms.untracked.uint32(seed)
     logger.info('Set RNG to seed %s', seed)
+
+def activate_finecalo(process):
+    for module_name in ['CaloSD', 'CaloTrkProcessing', 'TrackingAction']:
+        pset = getattr(process.g4SimHits, module_name)
+        pset.DoFineCalo = cms.bool(True)
+        pset.UseFineCalo = [2]
+        pset.EminFineTrack = cms.double(0.0)
+        add_debug_module(process, 'DoFineCalo')
+
+
+def add_generator(process, thing):
+    if thing in {'muon', 'tau'}:
+        pdgid = dict(muon=13, tau=15)[thing]
+        process.generator = cms.EDProducer("FlatRandomEGunProducer",
+            AddAntiParticle = cms.bool(True),
+            PGunParameters = cms.PSet(
+                MaxEta = cms.double(3.0),
+                MaxPhi = cms.double(3.14159265359),
+                MaxE = cms.double(35.0),
+                MinEta = cms.double(1.479),
+                MinPhi = cms.double(-3.14159265359),
+                MinE = cms.double(35.0),
+                PartID = cms.vint32(pdgid)
+                ),
+            Verbosity = cms.untracked.int32(0),
+            firstRun = cms.untracked.uint32(1),
+            psethack = cms.string('multiple particles predefined pT/E eta 1p479 to 3')
+            )
+    elif thing == 'minbias':
+        process_parameters = cms.vstring(
+            'SoftQCD:nonDiffractive = on',
+            'SoftQCD:singleDiffractive = on',
+            'SoftQCD:doubleDiffractive = on',
+            )
+        # if pt_min is not None: process_parameters.append('PhaseSpace:pTHatMin = {}'.format(pt_min))
+        # if pt_max is not None: process_parameters.append('PhaseSpace:pTHatMax = {}'.format(pt_max))
+        from Configuration.Generator.Pythia8CommonSettings_cfi import pythia8CommonSettingsBlock
+        from Configuration.Generator.MCTunes2017.PythiaCP5Settings_cfi import pythia8CP5SettingsBlock
+        process.generator = cms.EDFilter(
+            "Pythia8GeneratorFilter",
+            maxEventsToPrint = cms.untracked.int32(1),
+            pythiaPylistVerbosity = cms.untracked.int32(1),
+            filterEfficiency = cms.untracked.double(1.0),
+            pythiaHepMCVerbosity = cms.untracked.bool(False),
+            comEnergy = cms.double(14000.),
+            PythiaParameters = cms.PSet(
+                pythia8CommonSettingsBlock,
+                pythia8CP5SettingsBlock,
+                processParameters = process_parameters,
+                parameterSets = cms.vstring(
+                    'pythia8CommonSettings',
+                    'pythia8CP5Settings',
+                    'processParameters',
+                    )
+                )
+            )
+    else:
+        raise Exception('Unknown thing %s' % thing)
+
+
+def guntype(filename):
+    basename = osp.basename(filename)
+    for keyword in ['muon', 'tau', 'minbias']:
+        if keyword in basename:
+            return keyword
+    else:
+        raise Exception('Could not find a keyword')
