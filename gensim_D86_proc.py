@@ -25,9 +25,13 @@ def gensim(thing, n_events):
     process.maxEvents.input = cms.untracked.int32(n_events)
     process.source.firstLuminosityBlock = cms.untracked.uint32(1)
 
-    output_file = 'file:{}_GENSIM_D86_fine_n{}_{}.root'.format(thing, n_events, strftime('%b%d'))
+    output_file = 'file:{}_gensim_D86_fine_n{}_{}.root'.format(thing, n_events, strftime('%b%d'))
     common.logger.info('Output: %s', output_file)
     process.FEVTDEBUGoutput.fileName = cms.untracked.string(output_file)
+
+    process.FEVTDEBUGoutput.outputCommands.append("keep *_*G4*_*_*")
+    process.FEVTDEBUGoutput.outputCommands.append("keep SimClustersedmAssociation_mix_*_*")
+    process.FEVTDEBUGoutput.outputCommands.append("keep CaloParticlesedmAssociation_mix_*_*")
 
     common.add_generator(process, thing)
     return process

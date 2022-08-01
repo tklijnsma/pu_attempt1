@@ -35,6 +35,12 @@ def digi(input_rootfiles, pu_rootfiles=None, n_events=1):
     output_file = 'file:{}_digi_D86_fine_n{}_{}.root'.format(common.guntype(input_rootfiles[0]), n_events, strftime('%b%d'))
     common.logger.info('Output: %s', output_file)
     process.FEVTDEBUGHLToutput.fileName = cms.untracked.string(output_file)
+
+    # Not sure if needed - copied from the gensim step to make sure it all propagates
+    process.FEVTDEBUGHLToutput.outputCommands.append("keep *_*G4*_*_*")
+    process.FEVTDEBUGHLToutput.outputCommands.append("keep SimClustersedmAssociation_mix_*_*")
+    process.FEVTDEBUGHLToutput.outputCommands.append("keep CaloParticlesedmAssociation_mix_*_*")
+
     return process
 
 

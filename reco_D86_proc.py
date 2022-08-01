@@ -35,8 +35,52 @@ def reco(input_rootfiles, pu_rootfiles=None, n_events=1):
     common.logger.info('Output: %s', output_file)
     process.FEVTDEBUGHLToutput.fileName = cms.untracked.string(output_file)
 
+
+    # _____________________________________________
+    # Special settings for merging
+    process.load("SimTracker.TrackAssociation.trackingParticleRecoTrackAsssociation_cfi")
+    # append the HGCTruthProducer to the recosim step
+
+    # # If you want to run the associations or SC merging
+    # from SimCalorimetry.HGCalSimProducers.hgcHitAssociation_cfi import lcAssocByEnergyScoreProducer, scAssocByEnergyScoreProducer
+    # from SimCalorimetry.HGCalAssociatorProducers.LCToCPAssociation_cfi import layerClusterCaloParticleAssociation as layerClusterCaloParticleAssociationProducer
+    # from SimCalorimetry.HGCalAssociatorProducers.LCToSCAssociation_cfi import layerClusterSimClusterAssociation as layerClusterSimClusterAssociationProducer
+
+    # process.lcAssocByEnergyScoreProducer = lcAssocByEnergyScoreProducer
+    # process.layerClusterCaloParticleAssociationProducer = layerClusterSimClusterAssociationProducer
+    # process.scAssocByEnergyScoreProducer = scAssocByEnergyScoreProducer
+    # process.layerClusterSimClusterAssociationProducer = layerClusterCaloParticleAssociationProducer
+
+    # process.hgcalAssociators = cms.Task(
+    #     process.lcAssocByEnergyScoreProducer,
+    #     process.layerClusterCaloParticleAssociationProducer,
+    #     process.scAssocByEnergyScoreProducer,
+    #     process.layerClusterSimClusterAssociationProducer,
+    #     process.trackingParticleRecoTrackAsssociation
+    #     )
+
+    # process.assoc = cms.Sequence(process.hgcalAssociators)
+    # process.recosim_step *= process.assoc
+    # _____________________________________________
+
+
     process.FEVTDEBUGHLToutput.outputCommands.append('keep PSimTrackCrossingFrame_*_*_*')
     process.FEVTDEBUGHLToutput.outputCommands.append('keep PSimVertexCrossingFrame_*_*_*')
+
+    process.FEVTDEBUGHLToutput.outputCommands.extend([
+        "keep *_*G4*_*_*",
+        "keep *_MergedTrackTruth_*_*",
+        "keep *_trackingParticleRecoTrackAsssociation_*_*", 
+        "keep *_hgcRecHitsToSimClusters_*_*", 
+        "keep SimClustersedmAssociation_mix_*_*", "keep CaloParticlesedmAssociation_mix_*_*", 
+        "keep *_pfParticles_*_*",
+        "keep recoPFRecHits_*_*_*", 
+        "keep *_hgcSimTruth_*_*",
+        "keep *_lcAssocByEnergyScoreProcer_*_*",
+        "keep *_layerClusterCaloParticleAssociationProducer_*_*",
+        "keep *_scAssocByEnergyScoreProducer_*_*",
+        "keep *_layerClusterSimClusterAssociationProducer_*_*",
+        ])
 
     process.cfviewer = cms.EDAnalyzer("cfviewer")
     process.cfviewer_step = cms.Path(process.cfviewer)
