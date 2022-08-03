@@ -64,9 +64,6 @@ def reco(input_rootfiles, pu_rootfiles=None, n_events=1):
     # _____________________________________________
 
 
-    process.FEVTDEBUGHLToutput.outputCommands.append('keep PSimTrackCrossingFrame_*_*_*')
-    process.FEVTDEBUGHLToutput.outputCommands.append('keep PSimVertexCrossingFrame_*_*_*')
-
     process.FEVTDEBUGHLToutput.outputCommands.extend([
         "keep *_*G4*_*_*",
         "keep *_MergedTrackTruth_*_*",
@@ -80,11 +77,16 @@ def reco(input_rootfiles, pu_rootfiles=None, n_events=1):
         "keep *_layerClusterCaloParticleAssociationProducer_*_*",
         "keep *_scAssocByEnergyScoreProducer_*_*",
         "keep *_layerClusterSimClusterAssociationProducer_*_*",
+        "keep *_AllSimTracksAndVerticesProducer_*_*",
         ])
 
-    process.cfviewer = cms.EDAnalyzer("cfviewer")
-    process.cfviewer_step = cms.Path(process.cfviewer)
-    process.schedule.append(process.cfviewer_step)
+    # process.cfviewer = cms.EDAnalyzer("cfviewer")
+    # process.cfviewer_step = cms.Path(process.cfviewer)
+    # process.schedule.append(process.cfviewer_step)
+
+    process.AllSimTracksAndVerticesProducer = cms.EDProducer("AllSimTracksAndVerticesProducer")
+    process.AllSimTracksAndVerticesProducer_step = cms.Path(process.AllSimTracksAndVerticesProducer)
+    process.schedule.append(process.AllSimTracksAndVerticesProducer_step)
 
     return process
 

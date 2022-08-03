@@ -52,6 +52,7 @@ process.options = cms.untracked.PSet(
     IgnoreCompletely = cms.untracked.vstring(),
     Rethrow = cms.untracked.vstring(),
     SkipEvent = cms.untracked.vstring(),
+    # SkipEvent = cms.untracked.vstring('ProductNotFound'),
     allowUnscheduled = cms.obsolete.untracked.bool,
     canDeleteEarly = cms.untracked.vstring(),
     emptyRunLumiMode = cms.obsolete.untracked.string,
@@ -115,10 +116,10 @@ associatePatAlgosToolsTask(process)
 # customisation of the process.
 from DPGAnalysis.HGCalNanoAOD.nanoHGCML_cff import customizeReco, customizeMergedSimClusters, customizeNoMergedCaloTruth
 # Uncomment if you didn't schedule SimClusters/CaloParticles
-process = customizeNoMergedCaloTruth(process)
+# process = customizeNoMergedCaloTruth(process)
 # merged simclusters (turn off if you aren't running through PEPR)
-# process = customizeMergedSimClusters(process)
-# process = customizeReco(process)
+process = customizeMergedSimClusters(process)
+process = customizeReco(process)
 
 # End of customisation functions
 
