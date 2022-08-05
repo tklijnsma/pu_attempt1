@@ -4,6 +4,7 @@
 cmsrel CMSSW_12_1_1
 cd CMSSW_12_1_1/src
 cmsenv
+git cms-init
 git remote add thomas-cmssw git@github.com:tklijnsma/cmssw.git
 git fetch thomas-cmssw jansmerging:jansmerging
 git cms-merge-topic tklijnsma:jansmerging
