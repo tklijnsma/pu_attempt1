@@ -6,6 +6,7 @@ import subprocess
 import copy
 import importlib
 import os, os.path as osp
+from functools import cached_property
 
 import FWCore.ParameterSet.Config as cms
 
@@ -60,6 +61,11 @@ class CMSDriver(object):
             name += self.kwargs['-s'].replace(',', '_')
         return name + '.py'
 
+    @cached_property
+    def hash(self):
+        import hashlib
+        return hashlib.sha224(self.__repr__().encode()).hexdigest()
+
 
 def run_command(cmd, dry=False, stdout=None, stderr=None, stop_on_error=True):
     """
@@ -88,11 +94,51 @@ def run_command(cmd, dry=False, stdout=None, stderr=None, stop_on_error=True):
 
 def run_driver_cmd(driver, *args, **kwargs):
     recreate = kwargs.pop('recreate', False)
-    if recreate or not(osp.isfile(driver.outfile)):
+    # Make sure outfile is clearly defined
+    outfile = kwargs.pop('outfile', None)
+    if outfile:
+        driver = copy.deepcopy(driver)
+        driver.kwargs['--python_filename'] = outfile
+    elif '--python_filename' not in driver.kwargs:
+        driver.kwargs['--python_filename'] = 'tmp.py'
+    # Determine whether driver command should be rerun:
+    # - if recreate option is True
+    # - if the outfile does not exist yet
+    # - if the hash stored in the outfile differs from the driver hash
+    #   (i.e. the command has changed)
+    def run():
         logger.info('Running driver command %s', driver)
-        return run_command(driver.cmd, *args, **kwargs)
+        output = run_command(driver.cmd, *args, **kwargs)
+        add_hash_to_file(driver.outfile, driver.hash)
+        return output
+    if recreate:
+        logger.info(f'Force recreating {outfile}')
+        run()
+    elif not(osp.isfile(driver.outfile)):
+        logger.info(f'{outfile} does not exist yet')
+        run()
+    elif (stored_hash:=read_hash(driver.outfile)) != driver.hash:
+        logger.info(f'Hash in {outfile} {stored_hash} != {driver.hash}')
+        run()
     else:
-        logger.info('Not running driver command %s', driver)
+        logger.info(
+            f'Not running driver command; {driver.outfile} exists and hashes match.'
+            f' Driver:\n{driver}'
+            )
+
+
+def add_hash_to_file(filename, hash):
+    logger.info(f'Adding hash {hash} to {filename}')
+    with open(filename, 'r') as f:
+        txt = f.read()
+    txt = f'#{hash}\n' + txt
+    with open(filename, 'w') as f:
+        f.write(txt)
+
+
+def read_hash(filename):
+    with open(filename, 'r') as f:
+        return f.readline().strip().lstrip('#')
 
 
 def load_process_from_driver(driver, outfile=None):
@@ -101,11 +147,7 @@ def load_process_from_driver(driver, outfile=None):
     Then imports that outfile, and returns the `process` variable
     from it.
     """
-    if outfile:
-        driver = copy.deepcopy(driver)
-        driver.kwargs['--python_filename'] = outfile
-    if '--python_filename' not in driver.kwargs: driver.kwargs['--python_filename'] = 'tmp.py'
-    run_driver_cmd(driver)
+    run_driver_cmd(driver, outfile=outfile)
     process = importlib.import_module(driver.kwargs['--python_filename'].replace('.py', '')).process
     logger.info('Loaded process %s from %s', process, driver.kwargs['--python_filename'])
     return process
@@ -132,6 +174,7 @@ def add_debug_module(process, module_name):
             )
         WARNED_ABOUT_EDM_ML_DEBUG = True
 
+
 def rng(process, seed=1001):
     """
     Sets the RandomNumberGeneratorService to a fixed seed
@@ -140,6 +183,7 @@ def rng(process, seed=1001):
     process.RandomNumberGeneratorService.VtxSmeared.initialSeed = cms.untracked.uint32(seed)
     process.RandomNumberGeneratorService.mix.initialSeed = cms.untracked.uint32(seed)
     logger.info('Set RNG to seed %s', seed)
+
 
 def activate_finecalo(process):
     for module_name in ['CaloSD', 'CaloTrkProcessing', 'TrackingAction']:

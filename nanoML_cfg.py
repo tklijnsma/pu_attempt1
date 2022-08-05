@@ -5,15 +5,19 @@
 # with command line options: step1 --filein file:test.root --fileout testNanoML.root --mc --eventcontent NANOAODSIM --datatier NANOAODSIM --conditions auto:mc --step NANO
 import FWCore.ParameterSet.Config as cms
 from FWCore.ParameterSet.VarParsing import VarParsing
+import common
+from time import strftime
 
+cms_single = VarParsing.multiplicity.singleton
+cms_int = VarParsing.varType.int
+cms_bool = VarParsing.varType.bool
 
 process = cms.Process('NANO')
 options = VarParsing('python')
-options.setDefault('outputFile', 'testNanoML.root')
-options.register("nThreads", 1, VarParsing.multiplicity.singleton, VarParsing.varType.int,
-    "number of threads")
-options.register("runPFTruth", 0, VarParsing.multiplicity.singleton, VarParsing.varType.int,
-    "Don't run PFTruth (currently not working with pileup)")
+# options.setDefault('outputFile', 'testNanoML.root')
+options.register("nThreads", 1, cms_single, cms_int, "number of threads")
+options.register("runPFTruth", 0, cms_single, cms_int, "Don't run PFTruth (currently not working with pileup)")
+options.register("merge", True, cms_single, cms_bool, "Run the SimCluster merging steps")
 options.parseArguments()
 
 # import of standard configurations
@@ -83,6 +87,9 @@ process.configurationMetadata = cms.untracked.PSet(
 )
 
 # Output definition
+output_file = f'file:{common.guntype(options.inputFiles[0])}_nanoml_D86_fine_n{2}_{strftime("%b%d")}.root'
+if not options.merge: output_file = output_file.replace('.root', '_notmerged.root')
+common.logger.info('Output: %s', output_file)
 
 process.NANOAODSIMoutput = cms.OutputModule("NanoAODOutputModule",
     compressionAlgorithm = cms.untracked.string('LZMA'),
@@ -91,7 +98,7 @@ process.NANOAODSIMoutput = cms.OutputModule("NanoAODOutputModule",
         dataTier = cms.untracked.string('NANOAODSIM'),
         filterName = cms.untracked.string('')
     ),
-    fileName = cms.untracked.string(options.outputFile),
+    fileName = cms.untracked.string(output_file),
     outputCommands = process.NANOAODSIMEventContent.outputCommands
 )
 
@@ -118,8 +125,13 @@ from DPGAnalysis.HGCalNanoAOD.nanoHGCML_cff import customizeReco, customizeMerge
 # Uncomment if you didn't schedule SimClusters/CaloParticles
 # process = customizeNoMergedCaloTruth(process)
 # merged simclusters (turn off if you aren't running through PEPR)
-process = customizeMergedSimClusters(process)
-process = customizeReco(process)
+
+if options.merge:
+    common.logger.info('Adding merge options')
+    process = customizeMergedSimClusters(process)
+    process = customizeReco(process)
+else:
+    common.logger.info('Not running merging')
 
 # End of customisation functions
 
